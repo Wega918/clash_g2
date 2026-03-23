@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Battle Demo UI</title>
+<style>
+  :root{
+    --frame-w: 820px;
+    --frame-h: 560px;
+    --ui-font: Arial, Helvetica, sans-serif;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --panel-h: 90px;
+    --units-h: 60px;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     НАСТРОЙКА КАРТЫ ФАЗ ДЛЯ РАЗНЫХ РАЗРЕШЕНИЙ
+  ══════════════════════════════════════════════════════════ */
+  
+  /* 1. ДЕСКТОП (ПК) */
+  :root {
+    --map-w: 79%;
+    --map-h: 345px;
+    --map-top: 56px;
+    --map-scale: 0.94;
+  }
+
+  /* 2. ПЛАНШЕТ (от 541px до 860px) */
+  @media (max-width: 860px) {
+    :root {
+      --map-top: 56px;
+      --map-scale: 0.9;
+    }
+  }
+
+  /* 3. ПРОБЛЕМНАЯ ЗОНА (от 531px до 540px) */
+@media (max-width: 540px){
+:root {
+    --map-w: calc(103% - 8px);
+    --map-h: 64%;
+    --map-top: 17%;
+    --map-scale: 0.95;
+}
+}
+
+  /* 4. МОБИЛКА (до 530px) */
+@media (max-width: 530px){
+:root {
+    --map-w: calc(100% - 8px);
+    --map-h: 59%;
+    --map-top: 19%;
+    --map-scale: 1;
+}
+}
+
+  /* ══════════════════════════════════════════════════════════ */
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:var(--ui-font);
+    color:#fff;
+    overflow:hidden;
+    background:
+      radial-gradient(circle at 50% 28%, rgba(61,87,116,.28), transparent 24%),
+      radial-gradient(circle at 50% 50%, rgba(17,31,50,.45), rgba(1,5,12,.98));
+  }
+
+  .screen{
+    min-height:100%;
+    display:grid;
+    place-items:center;
+    padding:18px;
+  }
+
+  .viewport{
+    position:relative;
+    width:var(--frame-w);
+    height:var(--frame-h);
+    overflow:hidden;
+    border-radius:16px;
+    box-shadow:0 24px 70px rgba(0,0,0,.55);
+    background-color: #000;
+  }
+
+  .field{
+    position:absolute;
+    inset:0;
+    overflow:hidden;
+    background: url('1.png') center center / cover no-repeat;
+  }
+
+  /* ══════════════════════════════════════════════
+     CLOUD CANVAS (экраны загрузки) - ОПТИМИЗАЦИЯ ДЛЯ ТЕЛЕФОНОВ
+  ══════════════════════════════════════════════ */
+  #searchClouds{
+    position:absolute;inset:0;width:100%;height:100%;
+    z-index:15;pointer-events:none;
+    overflow: hidden;
+    transition: opacity 0.3s ease;
+  }
+  
+  .cloud-element {
+    position: absolute;
+    /* Легковесный SVG */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3CradialGradient id='g' cx='50%25' cy='50%25' r='50%25'%3E%3Cstop offset='0%25' stop-color='white' stop-opacity='0.9'/%3E%3Cstop offset='50%25' stop-color='%23e0f0ff' stop-opacity='0.6'/%3E%3Cstop offset='100%25' stop-color='white' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='50' fill='url(%23g)'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    will-change: transform;
+  }
+
+  #searchUI{
+    position:absolute;inset:0;z-index:20;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  #stateIdle{display:flex;flex-direction:column;align-items:center;gap:20px}
+  .idle-title{
+    font-size:28px;font-weight:900;
+    text-shadow:0 3px 0 rgba(0,0,0,.9),0 0 24px rgba(0,0,0,.7);letter-spacing:.04em;
+  }
+  .idle-sub{font-size:14px;color:rgba(255,255,200,.85);font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+  .btn-attack{
+    position:relative;border:none;cursor:pointer;
+    width:180px;height:62px;border-radius:999px;
+    background:linear-gradient(180deg,#ff7a45,#e03000);
+    box-shadow:0 6px 0 #8a1800,0 10px 28px rgba(200,50,0,.55),inset 0 2px 0 rgba(255,255,255,.28);
+    font-family:var(--ui-font);font-size:22px;font-weight:900;
+    color:#fff;text-shadow:0 2px 0 rgba(100,0,0,.7);letter-spacing:.06em;
+    transition:transform .1s,box-shadow .1s;
+  }
+  .btn-attack:hover{transform:translateY(-2px);box-shadow:0 8px 0 #8a1800,0 14px 32px rgba(200,50,0,.6),inset 0 2px 0 rgba(255,255,255,.28)}
+  .btn-attack:active{transform:translateY(4px);box-shadow:0 2px 0 #8a1800,inset 0 2px 0 rgba(255,255,255,.28)}
+  .btn-attack::after{
+    content:"";position:absolute;inset:-8px;border-radius:inherit;
+    border:3px solid rgba(255,120,60,.5);
+    animation:search-pulse 2s ease-in-out infinite;
+  }
+  @keyframes search-pulse{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:0;transform:scale(1.13)}}
+
+  #stateSearching{display:none;flex-direction:column;align-items:center;gap:14px}
+  .search-label{
+    font-size:20px;font-weight:900;
+    text-shadow:0 2px 0 rgba(0,0,0,.9);
+    animation:spulse 1s ease-in-out infinite alternate;
+  }
+  @keyframes spulse{from{opacity:.65}to{opacity:1}}
+  .search-dots{display:flex;gap:8px;margin-top:2px}
+  .sdot{width:10px;height:10px;border-radius:50%;background:#ffe060;animation:dbounce .9s ease-in-out infinite}
+  .sdot:nth-child(2){animation-delay:.15s}
+  .sdot:nth-child(3){animation-delay:.30s}
+  @keyframes dbounce{0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-7px);opacity:1}}
+
+  /* ══════════════════════════════════════════════
+     SCOUT UI 
+  ══════════════════════════════════════════════ */
+  #scoutUI{
+    position:absolute;inset:0;z-index:12;
+    display:none;pointer-events:none;
+  }
+  #scoutUI > *{pointer-events:all}
+
+  /* HUD */
+  .hud{
+    position:absolute;inset:0;
+    pointer-events:none;
+    font-weight:700;
+    text-shadow:0 2px 0 rgba(56,29,7,.95),0 0 2px rgba(0,0,0,.55);
+    z-index:3;
+  }
+
+  .top-left{
+    position:absolute;
+    top:16px;left:20px;
+    width:190px;
+  }
+  .player{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+  .badge{
+    width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;
+    font-size:22px;color:#fff4ad;
+    background:linear-gradient(180deg,#f1d55d,#b68616);
+    border:2px solid rgba(120,73,9,.9);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 5px rgba(0,0,0,.3);
+  }
+  .player-name{font-size:17px;line-height:1}
+  .player-sub{font-size:12px;margin-top:2px}
+  .loot-title{font-size:12px;margin:10px 0 6px}
+  .loot-item{display:flex;align-items:center;gap:9px;font-size:19px;margin:5px 0}
+  .loot-dot{
+    width:18px;height:18px;border-radius:50%;flex-shrink:0;
+    box-shadow:inset 0 2px 2px rgba(255,255,255,.45),inset 0 -2px 2px rgba(0,0,0,.32),0 1px 3px rgba(0,0,0,.4)
+  }
+  .gold  {background:radial-gradient(circle at 35% 30%,#fff3a8,#f3c324 58%,#bc8500)}
+  .elixir{background:radial-gradient(circle at 35% 30%,#ffd7ff,#d848ff 58%,#6a128a)}
+  .dark  {background:radial-gradient(circle at 35% 30%,#c9c7e6,#4c466a 58%,#181325)}
+
+  .top-center{
+    position:absolute;
+    left:50%;top:12px;transform:translateX(-50%);
+    width:260px;text-align:center;
+  }
+  .count-label{font-size:13px}
+  .count-value{font-size:32px;line-height:1}
+  .attack-line{
+    width:100%;height:2px;margin-top:5px;
+    background:linear-gradient(90deg,transparent,#ff6a35 12%,#ff7d43 50%,#ff6a35 88%,transparent);
+    box-shadow:0 0 5px rgba(255,120,60,.5);
+  }
+
+  /* ══════════════════════════════════════════════
+     DEFENSE MAP
+  ══════════════════════════════════════════════ */
+  .def-map {
+    position: absolute;
+    left: 50%;
+    
+    /* ДОБАВЛЕН ПОЛУПРОЗРАЧНЫЙ ФОН */
+    background: rgb(9 73 0 / 35%);
+    border-radius: 12px;
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    overflow: visible; 
+    pointer-events: all;
+    z-index: 10;
+
+    width: var(--map-w);
+    height: var(--map-h);
+    top: var(--map-top);
+    transform: translateX(-50%) scale(var(--map-scale));
+  }
+
+  .dm-field{
+    position:relative; width:100%; height:100%;
+    display:flex; flex-direction:column;
+    gap:0; overflow:visible;
+  }
+
+  /* HP BAR FULL WIDTH & SHINE EFFECT */
+  .phase-hp-wrapper {
+    width: 100%;
+    height: 3px;
+    background: rgba(0,0,0,0.6);
+    position: relative;
+    z-index: 4;
+    overflow: hidden; 
+  }
+  .phase-hp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff3300, #ffaa00);
+    box-shadow: inset 0 0 2px rgba(255,255,255,0.3);
+    position: relative;
+  }
+  
+  .phase-hp-fill::after, .target-hp-fill::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 50%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+    animation: hp-shine 2.5s infinite;
+  }
+  @keyframes hp-shine {
+    0% { left: -100%; }
+    40%, 100% { left: 200%; } 
+  }
+
+  .wall-hp {
+    height: 2px;
+    background: rgba(0,0,0,0.4);
+  }
+  .wall-hp .phase-hp-fill {
+    background: linear-gradient(90deg, #aaa, #fff);
+    box-shadow: inset 0 0 1px rgba(255, 255, 255, 0.4);
+  }
+
+  .ph-row{
+    flex:1; min-height:0;
+    display:flex; align-items:stretch;
+    position:relative; overflow:visible;
+    border-top:1px solid rgba(255,255,255,.06);
+  }
+
+  .ph-wall{
+    width:100%; height:24px; flex-shrink:0;
+    position:relative; z-index:4;
+    background-image:url('/images/building/Wall/Wall8.png');
+    background-size:24px 24px; background-repeat:repeat-x;
+  }
+  .ph-wall.pw-outer{background-image:url('/images/building/Wall/Wall3.png');}
+  .ph-wall.pw-core{background-image:url('/images/building/Wall/Wall12.png');}
+
+  .ph-label{
+    flex-shrink:0; width:52px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:2px 3px; text-align:center; gap:2px; position:relative; z-index:2;
+    border-right:1px solid rgba(255,255,255,.06);
+    background:linear-gradient(90deg,rgba(0,0,0,.3),rgba(0,0,0,.12));
+  }
+  .ph-num{font-size:9px; font-weight:900; letter-spacing:.06em; text-shadow:0 1px 3px rgba(0,0,0,.9);}
+  .ph-row.ph-core .ph-num{color:#ff9940;} .ph-row.ph-main .ph-num{color:#ffcc55;}
+  .ph-row.ph-outer .ph-num{color:#ddaa44;} .ph-row.ph-decoy .ph-num{color:#bb8833;}
+  .ph-name{font-size:6px; font-weight:700; color:rgba(255,255,200,.58); line-height:1.2; text-shadow:0 1px 2px rgba(0,0,0,.9);}
+  .ph-label::before{content:''; position:absolute; left:0; top:10%; bottom:10%; width:3px; border-radius:0 2px 2px 0;}
+  .ph-row.ph-core .ph-label::before{background:linear-gradient(180deg,#ff6020,#cc3000);box-shadow:0 0 6px #ff6020;}
+  .ph-row.ph-main .ph-label::before{background:linear-gradient(180deg,#ffcc00,#cc8800);box-shadow:0 0 5px #ffcc00;}
+  .ph-row.ph-outer .ph-label::before{background:linear-gradient(180deg,#88cc44,#448800);box-shadow:0 0 4px #88cc44;}
+  .ph-row.ph-decoy .ph-label::before{background:linear-gradient(180deg,#6688aa,#334466);box-shadow:0 0 3px #6688aa;}
+
+  .ph-cards{
+    flex:1; min-width:0; display:block;
+    overflow-x:auto; overflow-y:hidden; 
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none !important; -ms-overflow-style:none !important;
+    height:auto; min-height:100%;
+    
+    padding-top: 150px; margin-top: -150px; 
+    padding-bottom: 20px; margin-bottom: -20px;
+    
+    cursor:grab; user-select:none; box-sizing:border-box;
+    pointer-events: none; 
+    position: relative; 
+    z-index: 5;
+  }
+  .ph-cards:active{cursor:grabbing;}
+  .ph-cards::-webkit-scrollbar{display:none !important; width: 0 !important; height: 0 !important; -webkit-appearance: none;}
+  
+  .ph-inner{
+    display:inline-flex; 
+    align-items:flex-end; 
+    justify-content:space-around;
+    gap:8px; height:100%; padding:2px 6px 4px 6px; min-width:100%;
+    pointer-events: auto; 
+  }
+
+  @media (max-width: 540px) {
+    .ph-inner {
+      align-items: center; 
+      padding-bottom: 2px;
+    }
+  }
+
+  .ph-cards::before{content:''; position:absolute; top:150px; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,.10),transparent); pointer-events:none;}
+
+  .bcard{flex-shrink:0; position:relative; display:flex; flex-direction:column; align-items:center; cursor:pointer; transition:transform .12s, filter .3s; z-index: 2;}
+  .bcard:hover{transform:scale(1.15); z-index:30;}
+  .bcard.tip-open .bn-tip{display:block;}
+  .bcard:hover .bn-tip{display:block;}
+  
+  .bcard.targeted {transform: scale(1.25); z-index: 100 !important; filter: drop-shadow(0 0 12px rgba(255,50,0,0.8));}
+  .bcard.targeted::after {content: ''; position: absolute; top: -20px; font-size: 20px; animation: bounceTarget 0.5s infinite alternate; z-index: 105; pointer-events: none;}
+  @keyframes bounceTarget { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+
+  /* УВЕЛИЧЕННЫЕ РАЗМЕРЫ ЗДАНИЙ НА 25% */
+  .bc-img{position:relative; width:76px; height:68px; display:flex; align-items:flex-end; justify-content:center;}
+  .bc-img img{width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 3px 7px rgba(0,0,0,.75)); display:block; position:relative; z-index:1; pointer-events:none;}
+
+  .bc-fb{position:absolute; inset:2px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:17px; z-index:0;}
+  .bc-cnt{position:absolute; top:-5px; right:-6px; background:linear-gradient(135deg,#ff6a00,#cc2000); color:#fff; font-size:8px; font-weight:900; padding:1px 4px; border-radius:8px; border:1.5px solid rgba(255,255,255,.45); box-shadow:0 1px 4px rgba(0,0,0,.6); z-index:5; pointer-events:none;}
+  .bc-lvl{position:absolute; bottom:-4px; right:-5px; width:15px; height:15px; border-radius:50%; background:#0d1521; font-size:8px; font-weight:900; display:flex; align-items:center; justify-content:center; border:1.5px solid rgba(255,255,255,.28); text-shadow:none; box-shadow:0 1px 3px rgba(0,0,0,.7); z-index:5;}
+
+  .bn-tip{display:none; position:absolute; bottom:calc(100% + 7px); left:50%; transform:translateX(-50%); background:rgba(8,10,20,.97); border:1px solid rgba(255,255,255,.15); border-radius:8px; padding:6px 10px; white-space:nowrap; font-size:11px; font-weight:700; color:#fff; box-shadow:0 4px 16px rgba(0,0,0,.8); z-index:1000; pointer-events:none;}
+  .bn-tip-sub{font-size:9px;color:rgba(255,220,150,.75);font-weight:600;margin-top:2px;}
+  .bn-tip::after{content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:5px solid transparent; border-top-color:rgba(8,10,20,.97);}
+
+  .bcard:first-child .bn-tip { left: 0; transform: translateX(0); }
+  .bcard:first-child .bn-tip::after { left: 30px; transform: translateX(-50%); }
+  .bcard:last-child .bn-tip { left: auto; right: 0; transform: translateX(0); }
+  .bcard:last-child .bn-tip::after { left: auto; right: 30px; transform: translateX(50%); }
+
+  /* ══════════════════════════════════════════════
+     UNITS STRIP
+  ══════════════════════════════════════════════ */
+  .units-strip{
+    position:absolute;
+    width: 75%; max-width: 620px; 
+    left: 50%; transform: translateX(-50%);
+    bottom:var(--panel-h);
+    background:rgba(0,0,0,.55);
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+    border-top:1px solid rgba(255,255,255,.10);
+    border-radius: 12px 12px 0 0;
+    z-index:20; 
+    display:flex; align-items:center; justify-content:center; padding:0; box-sizing:border-box;
+    pointer-events: auto; 
+  }
+  .units-scroll{
+    position:relative; width:100%; height:100%;
+    overflow-x:auto; overflow-y:hidden;
+    scrollbar-width:none !important; -ms-overflow-style:none !important;
+    padding-top:150px; margin-top:-150px; 
+    display:flex; padding-bottom:6px;
+    pointer-events: none; 
+  }
+  .units-scroll::-webkit-scrollbar{display:none !important; width:0; height:0;}
+  
+  .units-wrap {
+    display: flex; align-items: flex-end; justify-content: center; height: 100%; margin: auto; padding: 0 16px; min-width: 100%; width: max-content;
+    pointer-events: auto; 
+  }
+  
+  .unit-icon{
+    position:relative; flex:0 0 auto; width:48px;height:48px; border-radius:10px;
+    border:2px solid rgba(255,255,255,.22); box-shadow:0 2px 8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.18);
+    overflow:visible; background:linear-gradient(180deg,#7cc0ff,#347fc7);
+    transition: transform .3s cubic-bezier(0.25,0.8,0.25,1), margin .3s ease, filter .3s;
+    margin-left: -12px; cursor: pointer;
+  }
+  .unit-icon:first-child { margin-left: 0; }
+  .unit-icon.hero {background:linear-gradient(180deg,#7e51ff,#4b1cb8);}
+  .unit-icon.spell{background:linear-gradient(180deg,#ad7cff,#6a42c5);}
+  .unit-icon:hover{transform:scale(1.12) translateY(-3px);z-index:15 !important;}
+  .unit-icon.active {transform: scale(1.15) translateY(-6px); margin-left: 12px; margin-right: 24px; z-index: 25 !important; border-color: #ffaa00; box-shadow: 0 4px 15px rgba(255, 120, 0, 0.7);}
+
+  .target-popup {
+    position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    background: rgba(10, 15, 25, 0.95); border: 1.5px solid #ff4400; border-radius: 6px; padding: 4px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.8), 0 0 10px rgba(255,50,0,0.4);
+    pointer-events: none; z-index: 9999 !important; opacity: 0; animation: popUpTarget 0.3s ease-out forwards;
+  }
+  @keyframes popUpTarget { to { opacity: 1; } }
+  .target-popup img { width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,.8)); }
+  .target-hp-bar { width: 34px; height: 4px; background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.2); border-radius: 2px; overflow:hidden;}
+  .target-hp-fill { height: 100%; background: linear-gradient(90deg, #ff3300, #ffcc00); position: relative;}
+
+  .unit-icon .ui-face{position:absolute;inset:2px; border-radius:7px; display:grid;place-items:center; background:radial-gradient(circle at 45% 35%,rgba(255,255,255,.55),rgba(255,255,255,.12) 55%,rgba(0,0,0,.1) 80%,transparent);}
+  .unit-icon .ui-cnt{position:absolute;top:1px;right:3px; font-size:9px;font-weight:900;color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.8); pointer-events:none;}
+  .unit-icon .ui-lvl{position:absolute;bottom:1px;left:2px; width:16px;height:16px;border-radius:50%; background:#111827;font-size:8px;font-weight:900; display:grid;place-items:center; border:1px solid rgba(255,255,255,.25); box-shadow:0 1px 3px rgba(0,0,0,.5); pointer-events:none;}
+
+
+  /* ── Bottom area ── */
+  .bottom-fade{
+    position:absolute;
+    left:0;right:0;
+    bottom:var(--panel-h);
+    height:70px;
+    background:linear-gradient(to top,rgba(0,0,0,.5) 0%,transparent 100%);
+    pointer-events:none;
+    z-index:1;
+  }
+
+  .troop-panel{
+    position:absolute;
+    left:0;right:0;bottom:0;
+    height:var(--panel-h);
+    background:rgba(0,0,0,.62);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+    border-top:1px solid rgba(255,255,255,.09);
+    z-index:25; 
+  }
+
+  .troop-bar{
+    position:absolute;inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:5px;
+    padding:8px 12px;
+    overflow-x:auto;overflow-y:hidden;
+    scrollbar-width:none !important; -ms-overflow-style:none !important;
+    user-select:none; -webkit-user-select:none;
+  }
+  .troop-bar::-webkit-scrollbar{display:none !important; width:0; height:0;}
+
+  .troop-card{
+    position:relative;
+    width:52px;height:72px;flex:0 0 52px;
+    border-radius:10px;
+    background:linear-gradient(180deg,#7cc0ff,#347fc7);
+    border:2px solid rgba(197,230,255,.35);
+    box-shadow:0 4px 12px rgba(0,0,0,.3),inset 0 2px 0 rgba(255,255,255,.2);
+    overflow:hidden;
+  }
+  .troop-card.hero {background:linear-gradient(180deg,#7e51ff,#4b1cb8)}
+  .troop-card.spell{background:linear-gradient(180deg,#ad7cff,#6a42c5)}
+  .troop-count{position:absolute;top:2px;right:5px;font-size:11px;color:#fff;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.7)}
+  .troop-icon{position:absolute;left:8px;right:8px;top:16px;bottom:20px;display:grid;place-items:center; pointer-events:none;}
+  .troop-icon::before{content:"";width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.65),rgba(255,255,255,.15) 40%,rgba(0,0,0,.08) 70%,transparent 71%)}
+  .troop-level{position:absolute;left:3px;bottom:3px;width:20px;height:20px;border-radius:50%;background:#111827;color:#fff;display:grid;place-items:center;font-size:11px;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+
+  /* ── MOBILE ОПТИМИЗАЦИЯ ── */
+  @media (max-width: 540px){
+    :root{--frame-w:100vw;--frame-h:100vh;--panel-h:84px;--units-h:50px;}
+    body{overflow:auto;background:#0a1220}
+    .screen{padding:0;display:block;min-height:auto}
+    .viewport{
+      width:100vw;height:100vh;min-height:400px;
+      border-radius:0;box-shadow:none;
+    }
+    
+    .units-strip { width: 92%; }
+
+    .units-strip, .troop-panel {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      background: rgba(10, 15, 25, 0.95) !important;
+    }
+    
+    .bc-img img { filter: none !important; }
+    
+    .bc-img::after {
+      content: ''; position: absolute; bottom: 2px; left: 15%; right: 15%; height: 8px;
+      background: rgba(0,0,0,0.6); border-radius: 50%; filter: blur(2px); z-index: 0; pointer-events: none;
+    }
+
+    .top-left{top:12px;left:12px;width:132px}
+    .player-name{font-size:13px}
+    .badge{width:28px;height:28px;font-size:18px}
+    .player-sub,.loot-title{font-size:10px}
+    .loot-item{font-size:14px;margin:2px 0}
+    .loot-dot{width:14px;height:14px}
+    .top-center{top:10px;width:150px}
+    .count-label{font-size:10px}
+    .count-value{font-size:22px}
+
+    .troop-panel{padding-bottom:var(--safe-bottom)}
+    .troop-bar{
+      justify-content:flex-start;
+      padding:6px 8px calc(var(--safe-bottom)+4px);
+    }
+    .troop-card{width:50px;height:68px;flex:0 0 50px}
+    .unit-icon{width:40px;height:40px;}
+    
+    /* УВЕЛИЧЕННЫЕ РАЗМЕРЫ ДЛЯ МОБИЛОК (+25%) */
+    .bc-img{width:61px;height:58px;}
+    .bcard.bcard-lg .bc-img{width:88px;height:78px;}
+    
+    .ph-label{width:36px;} .ph-num{font-size:7.5px;} .ph-name{font-size:5px;}
+    .ph-wall,.ph-wall.pw-outer,.ph-wall.pw-core{height:20px;background-size:20px 20px;}
+  }
+</style>
+</head>
+<body>
+  <div class="screen">
+    <div class="viewport" id="vp">
+      <div class="field"></div>
+      
+      <div id="searchClouds"></div>
+
+      <div id="searchUI">
+        <div id="stateIdle">
+          <div class="idle-title">Найди противника</div>
+          <div class="idle-sub">Атакуй и забирай ресурсы</div>
+          <button class="btn-attack" id="btnSearch">В БОЙ</button>
+        </div>
+        <div id="stateSearching">
+          <div class="search-label">Поиск противника…</div>
+          <div class="search-dots">
+            <div class="sdot"></div><div class="sdot"></div><div class="sdot"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="scoutUI">
+        <div class="hud">
+          <div class="top-left">
+            <div class="player">
+              <div class="badge">4</div>
+              <div>
+                <div class="player-name" id="scName">terserahlah</div>
+                <div class="player-sub" id="scClan">Penjahat Malam</div>
+              </div>
+            </div>
+            <div class="loot-title">Доступная добыча:</div>
+            <div class="loot-item"><span class="loot-dot gold"></span><span id="scGold">64 462</span></div>
+            <div class="loot-item"><span class="loot-dot elixir"></span><span id="scElixir">101 372</span></div>
+            <div class="loot-item"><span class="loot-dot dark"></span><span id="scDark">2 122</span></div>
+          </div>
+
+          <div class="top-center">
+            <div class="count-label">Начало сражения через</div>
+            <div class="count-value" id="timerVal">22с.</div>
+            <div class="attack-line"></div>
+          </div>
+        </div>
+
+        <div class="def-map" id="defMap">
+          <div class="dm-field" id="dmField"></div>
+        </div>
+
+        <div class="bottom-fade"></div>
+
+        <div class="units-strip"><div class="units-scroll" id="unitsScroll"></div></div>
+
+        <div class="troop-panel">
+          <div class="troop-bar" id="troopBar"></div>
+        </div>
+
+        <div class="vignette"></div>
+        <div class="gloss"></div>
+        <div class="edge-lines"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   ДРАГ-СКРОЛЛ (ДЛЯ ПК) + СКРОЛЛ КОЛЕСИКОМ И ТАЧЕМ
+══════════════════════════════════════════════════════════ */
+function makeDragScrollable(container) {
+  let isDown = false, startX, startScrollLeft, isDragging = false;
+
+  container.addEventListener('mousedown', (e) => {
+    isDown = true; isDragging = false; 
+    startX = e.pageX; 
+    startScrollLeft = container.scrollLeft;
+    container.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mouseup', () => { 
+    isDown = false; container.style.cursor = 'grab';
+    setTimeout(() => { isDragging = false; }, 0);
+  });
+  window.addEventListener('mouseleave', () => { 
+    isDown = false; container.style.cursor = 'grab';
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!isDown) return; 
+    e.preventDefault();
+    const walk = (e.pageX - startX);
+    if (Math.abs(walk) > 3) isDragging = true;
+    container.scrollLeft = startScrollLeft - walk;
+  });
+
+  container.addEventListener('touchstart', (e) => {
+    isDown = true; isDragging = false;
+    startX = e.touches[0].pageX;
+    startScrollLeft = container.scrollLeft;
+  }, {passive: true});
+  container.addEventListener('touchend', () => {
+    isDown = false;
+    setTimeout(() => { isDragging = false; }, 0);
+  });
+  container.addEventListener('touchcancel', () => {
+    isDown = false;
+  });
+  container.addEventListener('touchmove', (e) => {
+    if (!isDown) return;
+    const walk = (e.touches[0].pageX - startX);
+    if (Math.abs(walk) > 3) isDragging = true;
+    container.scrollLeft = startScrollLeft - walk;
+  }, {passive: true});
+
+  container.addEventListener('click', (e) => {
+    if (isDragging) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+
+  container.addEventListener('wheel', (e) => {
+    if (e.deltaY !== 0) {
+      container.scrollLeft += e.deltaY;
+      e.preventDefault();
+    }
+  }, {passive: false});
+}
+
+/* ══════════════════════════════════════════════════════════
+   DATA
+══════════════════════════════════════════════════════════ */
+const ENEMY_POOL = [
+  { name:'Karan',      clan:'League Legacy', th:10, trophies:3184, gold:66786, elixir:62833, dark:2257  },
+  { name:'DragonSlyr', clan:'Dark Empire',   th:9,  trophies:2890, gold:44200, elixir:38900, dark:1820  },
+  { name:'IronFist',   clan:'Steel Wolves',  th:11, trophies:3620, gold:88000, elixir:91000, dark:3100  },
+  { name:'SilentWar',  clan:'Ghost Legion',  th:8,  trophies:2410, gold:31000, elixir:29000, dark:980   },
+  { name:'VegaBlaze',  clan:'Dark Phoenix',  th:12, trophies:4210, gold:140000,elixir:135000,dark:5600  },
+];
+
+const ARMY = [
+  {count:'x4', level:5,  type:'unit'},
+  {count:'x1', level:7,  type:'unit'},
+  {count:'x1', level:6,  type:'unit'},
+  {count:'x1', level:1,  type:'unit'},
+  {count:'x1', level:7,  type:'unit'},
+  {count:'x1', level:8,  type:'unit'},
+  {count:'x5', level:7,  type:'unit'},
+  {count:'x8', level:4,  type:'unit'},
+  {count:'x1', level:7,  type:'unit'},
+  {count:'x1', level:26, type:'hero'},
+  {count:'x1', level:44, type:'hero'},
+  {count:'x5', level:5,  type:'spell'},
+  {count:'x1', level:7,  type:'spell'}
+];
+
+const IMG = {
+  wall:         '/images/building/Wall/Wall10.png',
+  bomb:         '/images/building/Bomb/Bomb6.png',
+  spring:       '/images/building/Spring_Trap/Spring_Trap5.png',
+  cannon:       '/images/building/Cannon/Cannon8.png',
+  archer:       '/images/building/Archer_Tower/Archer_Tower9.png',
+  builder_hut:  '/images/building/Builders_Hut/Builders_Hut2.png',
+  army_camp:    '/images/building/Army_Camp/Army_Camp8.png',
+  laboratory:   '/images/building/Laboratory/Laboratory9.png',
+  barracks:     '/images/building/Barracks/Barracks12.png',
+  spell_factory:'/images/building/Spell_Factory/Spell_Factory6.png',
+  gold_mine:    '/images/building/Gold_Mine/Gold_Mine10.png',
+  elixir_col:   '/images/building/Elixir_Collector/Elixir_Collector10.png',
+  dark_drill:   '/images/building/Dark_Elixir_Drill/Dark_Elixir_Drill5.png',
+  mortar:       '/images/building/Mortar/Mortar7.png',
+  wizard:       '/images/building/Wizard_Tower/Wizard_Tower7.png',
+  air_defense:  '/images/building/Air_Defense/Air_Defense7.png',
+  air_sweeper:  '/images/building/Air_Sweeper/Air_Sweeper2.png',
+  tesla:        '/images/building/Hidden_Tesla/Hidden_Tesla7.png',
+  gold_storage: '/images/building/Gold_Storage/Gold_Storage12.png',
+  elixir_st:    '/images/building/Elixir_Storage/Elixir_Storage16.png',
+  clan_castle:  '/images/building/Clan_Castle/Clan_Castle6.png',
+  townhall:     '/images/building/Town_Hall/Town_Hall10.png',
+  xbow:         '/images/building/X-Bow_Ground/X-Bow_Ground4.png',
+  inferno:      '/images/building/Inferno_Tower_Single/Inferno_Tower_Single2.png',
+  eagle:        '/images/building/Eagle_Artillery/Eagle_Artillery1.png',
+  bomb_tower:   '/images/building/Bomb_Tower/Bomb_Tower3.png',
+  dark_storage: '/images/building/Dark_Elixir/Dark_Elixir_Storage9.png',
+};
+
+const FB = {
+  wall:'', bomb:'', spring:'', cannon:'', archer:'', builder_hut:'', army_camp:'', laboratory:'', barracks:'', spell_factory:'', gold_mine:'', elixir_col:'', dark_drill:'', mortar:'', wizard:'', air_defense:'', air_sweeper:'', tesla:'', gold_storage:'', elixir_st:'', clan_castle:'', townhall:'', xbow:'', inferno:'', eagle:'', bomb_tower:'', dark_storage:'',
+};
+const FBBG = {
+  wall:'#5a5040', bomb:'#3a1800', spring:'#184030', cannon:'#2a2a2a', archer:'#4a2200', builder_hut:'#4a2a00', army_camp:'#1a3300', laboratory:'#003344', barracks:'#2a1400', spell_factory:'#1a0044', gold_mine:'#5a4000', elixir_col:'#440066', dark_drill:'#220044', mortar:'#333', wizard:'#3a0066', air_defense:'#001844', air_sweeper:'#003366', tesla:'#334400', gold_storage:'#5a3800', elixir_st:'#440077', clan_castle:'#222266', townhall:'#664400', xbow:'#002266', inferno:'#550000', eagle:'#443300', bomb_tower:'#552200', dark_storage:'#110022',
+};
+
+function getZones(th) {
+  const d=Math.max(1, th-3), d2=Math.max(1, th-2), e=Math.max(1, th-5), r=Math.max(1, th-4), s=Math.max(1, th-1);
+  return [
+    { label:'Ф4', sub:'Ядро', cls:'ph-core', wallCls:'pw-core', blds:[
+        {key:'townhall', name:'Ратуша', cat:'th', lvl:th, cnt:null, large:true},
+        {key:'clan_castle', name:'Кл.Крепость', cat:'both', lvl:Math.max(1,th-4), cnt:null},
+        ...(th>=11?[{key:'eagle', name:'Орёл.Арт.', cat:'strong', lvl:Math.max(1,th-6), cnt:null}]:[]),
+        ...(th>=10?[{key:'inferno', name:'Инферно', cat:'strong', lvl:e, cnt:2}]:[]),
+        {key:'gold_storage', name:'Хр.Золота', cat:'res', lvl:s, cnt:Math.ceil((2+Math.floor(th/5))/2)},
+        {key:'elixir_st', name:'Хр.Элик.', cat:'res', lvl:s, cnt:Math.ceil((2+Math.floor(th/5))/2)},
+        {key:'dark_storage', name:'Тёмн.Хран.', cat:'res', lvl:Math.max(1,th-1), cnt:null},
+      ]
+    },
+    { label:'Ф3', sub:'Оборона', cls:'ph-main', wallCls:'', blds:[
+        {key:'xbow', name:'X-Bow', cat:'ground', lvl:e, cnt:th>=9?Math.min(4,th-7):null},
+        {key:'wizard', name:'Маг.Башни', cat:'both', lvl:d2, cnt:Math.min(4,2+Math.floor(th/5))},
+        {key:'air_defense', name:'ПВО', cat:'air', lvl:d2, cnt:Math.min(5,2+Math.floor(th/4))},
+        {key:'bomb_tower', name:'Бомб.Башня', cat:'ground', lvl:Math.max(1,th-6),cnt:Math.min(3,th>=9?2:1)},
+        {key:'mortar', name:'Мортиры', cat:'ground', lvl:d2, cnt:Math.min(4,2+Math.floor(th/5))},
+      ]
+    },
+    { label:'Ф2', sub:'Контроль', cls:'ph-outer', wallCls:'', blds:[
+        {key:'cannon', name:'Пушки', cat:'ground', lvl:d, cnt:Math.min(6,2+Math.floor(th/3))},
+        {key:'archer', name:'Баш.Лучниц', cat:'both', lvl:d, cnt:Math.min(7,2+Math.floor(th/3))},
+        {key:'tesla', name:'Тесла', cat:'both', lvl:d2, cnt:Math.min(4,2+Math.floor(th/4))},
+        {key:'air_sweeper', name:'Продувалка', cat:'air', lvl:Math.max(1,th-6),cnt:2},
+        {key:'bomb', name:'Гиг.Бомбы', cat:'trap', lvl:Math.max(1,th-4),cnt:Math.min(6,3+Math.floor(th/4))},
+        {key:'spring', name:'Пружины', cat:'trap', lvl:Math.max(1,th-3),cnt:Math.min(6,3+Math.floor(th/4))},
+      ]
+    },
+    { label:'Ф1', sub:'Обманка', cls:'ph-decoy', wallCls:'pw-outer', blds:[
+        {key:'barracks', name:'Казармы', cat:'res', lvl:r, cnt:Math.min(5,3+Math.floor(th/5))},
+        {key:'laboratory', name:'Лаборатория', cat:'res', lvl:Math.max(1,th-2),cnt:null},
+        {key:'spell_factory',name:'Фаб.Закл.', cat:'res', lvl:Math.max(1,th-5),cnt:null},
+        {key:'army_camp', name:'Лагери', cat:'res', lvl:r, cnt:4},
+        {key:'gold_mine', name:'Шахты', cat:'res', lvl:d, cnt:Math.min(7,3+Math.floor(th/3))},
+        {key:'elixir_col', name:'Сборщики', cat:'res', lvl:d, cnt:Math.min(7,3+Math.floor(th/3))},
+        {key:'dark_drill', name:'Буровые', cat:'res', lvl:Math.max(1,th-5),cnt:Math.min(3,Math.floor(th/4))},
+        {key:'builder_hut', name:'Хижины', cat:'res', lvl:3, cnt:Math.min(6,4+Math.floor(th/5))},
+      ]
+    },
+  ];
+}
+
+/* ══════════════════════════════════════════════════════════
+   STATE & DOM
+══════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+
+let PHASE = 'idle';
+let currentEnemy = null;
+let timerSecs = 30;
+let timerInt  = null;
+let searchTmr = null;
+let animFrameId = null;
+
+const searchUI = $('searchUI');
+const scoutUI  = $('scoutUI');
+const stIdle   = $('stateIdle');
+const stSearch = $('stateSearching');
+
+function showSearch(s){
+  stIdle.style.display   = s==='idle'      ? 'flex':'none';
+  stSearch.style.display = s==='searching' ? 'flex':'none';
+}
+function fmtN(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' ')}
+
+/* ══════════════════════════════════════════════════════════
+   CLOUD ENGINE (Экраны загрузки) - ОПТИМИЗИРОВАННАЯ ФИЗИКА
+══════════════════════════════════════════════════════════ */
+const cloudContainer = $('searchClouds');
+let W, H;
+let domClouds = [];
+let cloudPhase = 'idle'; // 'in', 'idle', 'out'
+let cloudOutProgress = 0;
+
+class DOMCloud {
+  constructor(index, total) {
+    this.r = 150 + Math.random() * 200; 
+    this.targetX = Math.random() * W;
+    this.targetY = Math.random() * H;
+    
+    // Спавним облака за экраном с левой и правой стороны
+    const side = index < total / 2 ? 'left' : 'right';
+    this.x = side === 'left' ? -this.r - 200 : W + this.r + 200;
+    this.y = this.targetY;
+    
+    this.vx = 0;
+    this.time = Math.random() * 100;
+    
+    this.el = document.createElement('div');
+    this.el.className = 'cloud-element';
+
+    // УСТРАНЕНИЕ ОШИБКИ: Задаем начальные размеры и позицию напрямую
+    this.el.style.width = `${this.r * 2}px`;
+    this.el.style.height = `${this.r * 2}px`;
+    this.el.style.transform = `translate(${this.x - this.r}px, ${this.y - this.r}px)`;
+
+    cloudContainer.appendChild(this.el);
+  }
+  
+  update(dt) {
+    this.time += dt;
+    
+    if (cloudPhase === 'in') {
+      // Плавное стягивание облаков к центру
+      this.x += (this.targetX - this.x) * dt * 5;
+    } else if (cloudPhase === 'out') {
+      // Резкий разлет от центра
+      const dir = (this.targetX > W / 2) ? 1 : -1;
+      this.vx += dir * dt * 8000; 
+      this.x += this.vx * dt;
+    }
+    
+    const floatY = Math.sin(this.time) * 15; // Легкий дрейф
+    this.el.style.transform = `translate(${this.x - this.r}px, ${this.y - this.r + floatY}px)`;
+  }
+  
+  destroy() {
+    if(this.el.parentNode) this.el.parentNode.removeChild(this.el);
+  }
+}
+
+function initDOMClouds() {
+  domClouds.forEach(c => c.destroy());
+  domClouds = [];
+  const numClouds = 24; // Увеличили плотность, чтобы не было проплешин
+  for(let i=0; i<numClouds; i++) {
+    domClouds.push(new DOMCloud(i, numClouds));
+  }
+}
+
+let lastT = 0;
+
+function domLoop(ts) {
+  if (PHASE === 'scout' && domClouds.length === 0) {
+    animFrameId = null;
+    return;
+  }
+
+  const dt = Math.min((ts - lastT) / 1000, 0.05);
+  lastT = ts;
+
+  domClouds.forEach(c => c.update(dt));
+
+  if (cloudPhase === 'out') {
+    cloudOutProgress += dt;
+    // Очень быстрое угасание во время разлета
+    cloudContainer.style.opacity = Math.max(0, 1 - cloudOutProgress * 2.5); 
+    
+    // Завершаем стадию, когда облака скрылись
+    if (cloudOutProgress > 0.4) {
+      onRevealDone();
+    }
+  }
+
+  animFrameId = requestAnimationFrame(domLoop);
+}
+
+
+function doSearch(){
+  cloudContainer.style.opacity='1';
+  scoutUI.style.display='none';
+  searchUI.style.display='flex';
+  showSearch('searching');
+  
+  clearTimeout(searchTmr);
+  searchTmr=setTimeout(()=>{
+    currentEnemy=ENEMY_POOL[Math.floor(Math.random()*ENEMY_POOL.length)];
+    cloudPhase = 'out'; // Запускаем стадию быстрого исчезновения
+    cloudOutProgress = 0;
+  },1800);
+}
+
+function onRevealDone(){
+  domClouds.forEach(c => c.destroy()); domClouds = [];
+  cloudContainer.style.opacity='0';
+  searchUI.style.display='none';
+  scoutUI.style.display='block';
+  PHASE='scout';
+  renderScout(currentEnemy);
+}
+
+/* ══════════════════════════════════════════════════════════
+   SCOUT SCREEN (Генерация врага)
+══════════════════════════════════════════════════════════ */
+function renderScout(e){
+  $('scName').textContent   = e.name;
+  $('scClan').textContent   = e.clan;
+  $('scGold').textContent   = fmtN(e.gold);
+  $('scElixir').textContent = fmtN(e.elixir);
+  $('scDark').textContent   = fmtN(e.dark);
+
+  buildDefenseMap(e.th);
+  const dm = $('defMap');
+  if(dm){ dm.classList.remove('show'); void dm.offsetWidth; dm.classList.add('show'); }
+
+  buildTroopBar();
+  startTimer(30);
+}
+
+/* ══════════════════════════════════════════════════════════
+   ГЕНЕРАЦИЯ КАРТЫ ЗДАНИЙ
+══════════════════════════════════════════════════════════ */
+function buildDefenseMap(thLevel){
+  const field = document.getElementById('dmField');
+  field.innerHTML='';
+
+  const zones = getZones(thLevel);
+  const ordered = [...zones];
+
+  ordered.forEach((zone, zi)=>{
+    const row = document.createElement('div');
+    row.className = 'ph-row '+zone.cls;
+
+    const lbl = document.createElement('div');
+    lbl.className = 'ph-label';
+    lbl.innerHTML = `<div class="ph-num">${zone.label}</div><div class="ph-name">${zone.sub}</div>`;
+    row.appendChild(lbl);
+
+    const strip = document.createElement('div');
+    strip.className = 'ph-cards';
+
+    const inner = document.createElement('div');
+    inner.className = 'ph-inner';
+    zone.blds.forEach(b => inner.appendChild(makeBCard(b)));
+    strip.appendChild(inner);
+
+    makeDragScrollable(strip);
+    row.appendChild(strip);
+    field.appendChild(row);
+
+    const hpBar = document.createElement('div');
+    hpBar.className = 'phase-hp-wrapper';
+    hpBar.innerHTML = `<div class="phase-hp-fill" style="width: ${40 + Math.random()*60}%;"></div>`;
+    field.appendChild(hpBar);
+
+    if(zi < ordered.length - 1){
+      const wall = document.createElement('div');
+      wall.className = 'ph-wall'+(zone.wallCls?' '+zone.wallCls:'');
+      field.appendChild(wall);
+
+      const wallHp = document.createElement('div');
+      wallHp.className = 'phase-hp-wrapper wall-hp';
+      wallHp.innerHTML = `<div class="phase-hp-fill" style="width: ${40 + Math.random()*60}%;"></div>`;
+      field.appendChild(wallHp);
+    }
+  });
+
+  const botOuter = document.createElement('div');
+  botOuter.className = 'ph-wall pw-outer';
+  field.appendChild(botOuter);
+
+  const botHp = document.createElement('div');
+  botHp.className = 'phase-hp-wrapper wall-hp';
+  botHp.innerHTML = `<div class="phase-hp-fill" style="width: ${40 + Math.random()*60}%;"></div>`;
+  field.appendChild(botHp);
+}
+
+function makeBCard(b){
+  const wrap = document.createElement('div');
+  wrap.className = 'bcard'+(b.large?' bcard-lg':'');
+
+  const imgBox = document.createElement('div');
+  imgBox.className = 'bc-img';
+
+  const fb = document.createElement('div');
+  fb.className = 'bc-fb';
+  fb.style.background = FBBG[b.key]||'#333';
+  fb.textContent = FB[b.key]||'';
+  imgBox.appendChild(fb);
+
+  const img = document.createElement('img');
+  img.alt = b.name; img.draggable = false;
+  img.onload  = ()=>{ fb.style.opacity='0'; };
+  img.onerror = ()=>{ img.style.display='none'; fb.style.opacity='1'; };
+  if(IMG[b.key]) img.src = IMG[b.key];
+  imgBox.appendChild(img);
+
+  if(b.cnt && b.cnt>1){
+    const cnt = document.createElement('div');
+    cnt.className = 'bc-cnt';
+    cnt.textContent = '×'+b.cnt;
+    imgBox.appendChild(cnt);
+  }
+  const lvl = document.createElement('div');
+  lvl.className = 'bc-lvl';
+  lvl.textContent = b.lvl;
+  imgBox.appendChild(lvl);
+
+  wrap.appendChild(imgBox);
+
+  const tip = document.createElement('div');
+  tip.className = 'bn-tip';
+  const catRu={ground:' земля',air:' воздух',both:'⊕ земля+воздух',
+               strong:' всё',th:' главная цель',res:' ресурс',trap:' ловушка'}[b.cat]||'';
+  tip.innerHTML=`<div>${b.name}${b.cnt>1?' <span style="color:#ffaa44">×'+b.cnt+'</span>':''} Lv${b.lvl}</div>
+    <div class="bn-tip-sub">${catRu}</div>`;
+  wrap.appendChild(tip);
+
+  wrap.addEventListener('click', e=>{
+    e.stopPropagation();
+    const open = wrap.classList.toggle('tip-open');
+    if(open){
+      document.querySelectorAll('.bcard.tip-open').forEach(el=>{
+        if(el!==wrap) el.classList.remove('tip-open');
+      });
+    }
+  });
+  return wrap;
+}
+
+function startTimer(secs){
+  clearInterval(timerInt); timerSecs=secs; updateTimer();
+  timerInt=setInterval(()=>{ timerSecs--; updateTimer(); if(timerSecs<=0){clearInterval(timerInt);onTimerEnd();} },1000);
+}
+
+function updateTimer(){
+  const tv=$('timerVal');
+  if(tv) tv.textContent=timerSecs+'с.';
+}
+
+function onTimerEnd(){ setTimeout(()=>alert(' Время разведки вышло!\n Атака начинается!'),200); }
+
+/* ══════════════════════════════════════════════════════════
+   ARMY & UNITS STRIP
+══════════════════════════════════════════════════════════ */
+function buildTroopBar(){
+  const bar = document.getElementById('troopBar');
+  bar.innerHTML = ARMY.map(t=>`
+    <div class="troop-card ${t.type==='hero'?'hero':t.type==='spell'?'spell':''}">
+      <div class="troop-count">${t.count}</div>
+      <div class="troop-icon"></div>
+      <div class="troop-level">${t.level}</div>
+    </div>`).join('');
+  makeDragScrollable(bar);
+
+  const scroll = document.getElementById('unitsScroll');
+  if(!scroll) return;
+  scroll.innerHTML='';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'units-wrap';
+
+  ARMY.forEach((t, i) => {
+    const icon = document.createElement('div');
+    icon.className = 'unit-icon' + (t.type==='hero'?' hero':t.type==='spell'?' spell':'');
+    icon.style.zIndex = i;
+
+    const face = document.createElement('div');
+    face.className = 'ui-face';
+    icon.appendChild(face);
+
+    const cnt = document.createElement('div');
+    cnt.className = 'ui-cnt';
+    cnt.textContent = t.count;
+    icon.appendChild(cnt);
+
+    const lvl = document.createElement('div');
+    lvl.className = 'ui-lvl';
+    lvl.textContent = t.level;
+    icon.appendChild(lvl);
+
+    icon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isActive = icon.classList.contains('active');
+      
+      document.querySelectorAll('.unit-icon').forEach(u => u.classList.remove('active'));
+      document.querySelectorAll('.target-popup').forEach(p => p.remove());
+      document.querySelectorAll('.bcard.targeted').forEach(b => b.classList.remove('targeted'));
+
+      if (!isActive) {
+        icon.classList.add('active');
+        
+        const allCards = Array.from(document.querySelectorAll('.bcard'));
+        if (allCards.length > 0) {
+            const targetCard = allCards[Math.floor(Math.random() * allCards.length)];
+            targetCard.classList.add('targeted');
+            
+            const imgEl = targetCard.querySelector('img');
+            const fbEl = targetCard.querySelector('.bc-fb');
+            const imgSrc = (imgEl && imgEl.style.display !== 'none') ? imgEl.src : null;
+            
+            const popup = document.createElement('div');
+            popup.className = 'target-popup';
+            
+            if (imgSrc) {
+                popup.innerHTML = `<img src="${imgSrc}"><div class="target-hp-bar"><div class="target-hp-fill" style="width:${20+Math.random()*80}%"></div></div>`;
+            } else {
+                popup.innerHTML = `<div style="font-size:16px; line-height:30px;">${fbEl ? fbEl.textContent : ''}</div><div class="target-hp-bar"><div class="target-hp-fill" style="width:${20+Math.random()*80}%"></div></div>`;
+            }
+            icon.appendChild(popup);
+        }
+      }
+    });
+
+    wrap.appendChild(icon);
+  });
+
+  scroll.appendChild(wrap);
+  makeDragScrollable(scroll);
+}
+
+/* ══════════════════════════════════════════════════════════
+   BOOT & EVENT LISTENERS
+══════════════════════════════════════════════════════════ */
+$('btnSearch').addEventListener('click',()=>{
+  if(PHASE!=='idle') return;
+  W = $('vp').offsetWidth; H = $('vp').offsetHeight;
+  initDOMClouds();
+  
+  PHASE='searching';
+  cloudPhase='in'; // Даем сигнал облакам стягиваться к центру
+  showSearch('searching');
+  lastT = performance.now();
+  if(!animFrameId) animFrameId = requestAnimationFrame(domLoop);
+  
+  // Даем небольшую задержку, чтобы облака успели закрыть экран перед вызовом UI
+  setTimeout(()=>doSearch(), 500);
+});
+
+// Снятие выделений при клике мимо
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('.unit-icon')) {
+    document.querySelectorAll('.unit-icon.active').forEach(u => u.classList.remove('active'));
+    document.querySelectorAll('.bcard.targeted').forEach(b => b.classList.remove('targeted'));
+    document.querySelectorAll('.target-popup').forEach(p => p.remove());
+  }
+  if(!e.target.closest('.bcard')) {
+    document.querySelectorAll('.bcard.tip-open').forEach(el=>el.classList.remove('tip-open'));
+  }
+});
+
+// Запуск
+window.addEventListener('resize',()=>{
+  W = $('vp').offsetWidth; H = $('vp').offsetHeight;
+});
+W = $('vp').offsetWidth; H = $('vp').offsetHeight;
+showSearch('idle'); 
+searchUI.style.display='flex'; 
+scoutUI.style.display='none';
+
+</script>
+</body>
+</html>

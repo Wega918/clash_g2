@@ -1,0 +1,8 @@
+[2026-02-20 08:07:11] STORAGE ERROR: Call to undefined function storage_loc_getMaxCountForTH() | FILE: /home/p/gr5478gr/clash.vipmars.online/public_html/app/locations/storage.php | LINE: 400
+[2026-02-20 08:19:49] STORAGE ERROR: Call to undefined function format_resource_amount() FILE: /home/p/gr5478gr/clash.vipmars.online/public_html/app/locations/storage.php LINE: 383 VIEW: main TYPE: 
+[2026-02-20 08:20:00] STORAGE ERROR: Call to undefined function format_resource_amount() FILE: /home/p/gr5478gr/clash.vipmars.online/public_html/app/locations/storage.php LINE: 383 VIEW: main TYPE: 
+[2026-02-20 08:20:02] STORAGE ERROR: Call to undefined function storage_loc_getMaxCountForTH() FILE: /home/p/gr5478gr/clash.vipmars.online/public_html/app/locations/storage.php LINE: 435 VIEW: list TYPE: gold_storage
+[2026-02-20 08:20:05] STORAGE ERROR: Call to undefined function format_resource_amount() FILE: /home/p/gr5478gr/clash.vipmars.online/public_html/app/locations/storage.php LINE: 383 VIEW: main TYPE: 
+[2026-02-20 08:20:14] STORAGE ERROR: Call to undefined function format_resource_amount() FILE: /home/p/gr5478gr/clash.vipmars.online/public_html/app/locations/storage.php LINE: 383 VIEW: main TYPE: 
+[2026-02-20 08:20:15] STORAGE ERROR: Call to undefined function storage_loc_getMaxCountForTH() FILE: /home/p/gr5478gr/clash.vipmars.online/public_html/app/locations/storage.php LINE: 435 VIEW: list TYPE: gold_storage
+[2026-02-20 08:33:48] STORAGE ERROR: Call to undefined function storage_loc_getMaxCountForTH() | FILE: /home/p/gr5478gr/clash.vipmars.online/public_html/app/locations/storage.php | LINE: 424 | VIEW: list | TYPE: gold_storage | ID:  | CODE: 500
