@@ -47,10 +47,10 @@ if (typeof window.ENVIRONMENT === 'undefined') {
       t.style.color = '#fff';
       t.style.fontFamily = 'inherit';
 
-      var icon = 'ℹ️';
-      if (type === 'error') icon = '❌';
-      else if (type === 'success') icon = '✅';
-      else if (type === 'warning') icon = '⚠️';
+      var icon = '';
+      if (type === 'error') icon = '';
+      else if (type === 'success') icon = '';
+      else if (type === 'warning') icon = '';
 
       var h = document.createElement('div');
       h.style.fontWeight = '700';
@@ -137,7 +137,6 @@ if (typeof window.ENVIRONMENT === 'undefined') {
   };
 })();
 
-
 // ------------------ App-like touch UX (disable callout/context menu, stop bubbling) ------------------
 (function(){
   var SEL_NO_CTX = '.coc-qminus, .coc-qplus, .prod-qc-btn, .building, .building-label, .modal-button-corner';
@@ -157,8 +156,6 @@ if (typeof window.ENVIRONMENT === 'undefined') {
   }, true);
 
     // 2) Do not let clicks on inner controls trigger parent "building" click.
-  // Important: DO NOT stop touchstart/pointerdown bubbling here, otherwise existing "hold to remove" logic
-  // in barracks/spells can break on mobile. We only stop the final click.
   document.addEventListener('click', function(e){
     var t = e.target;
     if (closest(t, '.prod-qc-btn, .coc-qminus, .coc-qplus')) {
@@ -168,7 +165,6 @@ if (typeof window.ENVIRONMENT === 'undefined') {
 })();
 
 // Global small notification for "auth required" situations.
-// Used by multiple location scripts to avoid scary console errors.
 window.cocNotifyAuthRequired = window.cocNotifyAuthRequired || function(){
   try {
     var id = 'coc-auth-toast';
@@ -194,7 +190,7 @@ window.cocNotifyAuthRequired = window.cocNotifyAuthRequired || function(){
       el.style.gap = '10px';
       el.style.cursor = 'pointer';
       el.style.userSelect = 'none';
-      el.innerHTML = '🔒 Требуется авторизация. Нажмите, чтобы войти.';
+      el.innerHTML = ' Требуется авторизация. Нажмите, чтобы войти.';
       el.addEventListener('click', function(){
         try { window.location.href = 'login.php'; } catch(e) {}
       });
@@ -242,8 +238,6 @@ window.cocNotifyAuthRequired = window.cocNotifyAuthRequired || function(){
 
         var pct = 0;
         if (cap > 0) pct = (amount / cap) * 100;
-
-        // Если ресурс > 0, но процент получился слишком маленьким, покажем хотя бы тонкую полоску.
         if (amount > 0 && cap > 0 && pct > 0 && pct < 1) pct = 1;
 
         barEl.style.width = clampPct(pct) + '%';
@@ -395,7 +389,6 @@ window.cocNotifyAuthRequired = window.cocNotifyAuthRequired || function(){
     window.__home_prod_collect_busy = true;
     setBusy(true);
 
-    // meta for notifications
     var meta = null;
     if (buildingType === 'gold_mine') meta = { res: 'gold', title: 'Золото', gen: 'золота', icon: '/images/icons/gold.png' };
     else if (buildingType === 'elixir_collector') meta = { res: 'elixir', title: 'Эликсир', gen: 'эликсира', icon: '/images/icons/elixir.png' };
@@ -421,19 +414,16 @@ window.cocNotifyAuthRequired = window.cocNotifyAuthRequired || function(){
         return;
       }
 
-      // Хранилища заполнены (есть что собирать, но места нет)
       if (payload && payload.collectBlocked === 'storage_full') {
         if (window.gameToast) window.gameToast('warning', (meta && meta.title) ? meta.title : 'Производство', 'Хранилища заполнены');
         return;
       }
 
-      // Нечего собирать
       if (!payload || !payload.collectRes || !payload.collectAmt) {
         if (window.gameToast) window.gameToast('warning', (meta && meta.title) ? meta.title : 'Производство', 'Нечего собирать');
         return;
       }
 
-      // Собрали ресурс (с иконкой)
       var amt = parseInt(payload.collectAmt, 10) || 0;
       if (amt > 0) {
         var icon = (meta && meta.icon) ? meta.icon : '';
@@ -454,7 +444,6 @@ window.cocNotifyAuthRequired = window.cocNotifyAuthRequired || function(){
     }
   };
 
-  // Делегирование клика для кнопок ресурсов на главной (без inline JS)
   document.addEventListener('click', function(e){
     var t = e.target;
     if (!t) return;
@@ -468,7 +457,7 @@ window.cocNotifyAuthRequired = window.cocNotifyAuthRequired || function(){
       if (window.homeProductionCollectAll) window.homeProductionCollectAll(tp);
     } catch(_e) {}
   }, true);
-})();;
+})();
 
 // ------------------ Оборона → Стены: показать/скрыть блок массового улучшения ------------------
 (function(){
@@ -506,7 +495,6 @@ window.cocNotifyAuthRequired = window.cocNotifyAuthRequired || function(){
     e.preventDefault();
     e.stopPropagation();
   }, true);
-
 
 // ------------------ Оборона → Стены: массовое/авто улучшение + подтверждения ------------------
 (function(){
@@ -733,13 +721,9 @@ window.cocNotifyAuthRequired = window.cocNotifyAuthRequired || function(){
     return 'app/locations/defense.php';
   }
 
-  // Bulk click
   document.addEventListener('click', function(e){
     var t = e.target;
     if (!t) return;
-
-    // Walls V2 is handled inside js/locations/defense.js.
-    // Keep legacy handler disabled to avoid double-confirm modals and "Не удалось прочитать конфиг стен".
     if (window.defenseWallsV2) return;
     var btn = t.closest ? t.closest('[data-walls-bulk="1"]') : null;
     if (!btn) return;
@@ -803,12 +787,9 @@ window.cocNotifyAuthRequired = window.cocNotifyAuthRequired || function(){
     e.stopPropagation();
   }, true);
 
-  // Auto click
   document.addEventListener('click', function(e){
     var t = e.target;
     if (!t) return;
-
-    // Walls V2 is handled inside js/locations/defense.js.
     if (window.defenseWallsV2) return;
     var btn = t.closest ? t.closest('[data-walls-auto="1"]') : null;
     if (!btn) return;
@@ -904,6 +885,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pageBtn && !isNavigationInProgress) {
             e.preventDefault();
             const targetPage = pageBtn.dataset.page;
+            
+            // Логика интеграции Боя (Modal / Inline)
+            if (targetPage === 'battle') {
+                if (window.innerWidth > 540) {
+                    // ПК или Планшет — открываем модальное окно
+                    await openBattleModal();
+                } else {
+                    // Мобилка — грузим прямо в #app
+                    if (targetPage !== currentPage) {
+                        currentPage = targetPage;
+                        await loadPage(targetPage);
+                    }
+                }
+                return;
+            }
+
             if (targetPage !== currentPage) {
                 currentPage = targetPage;
                 await loadPage(targetPage);
@@ -915,6 +912,99 @@ document.addEventListener('DOMContentLoaded', () => {
             await handleLogout();
         }
     });
+
+    async function openBattleModal() {
+        if (isNavigationInProgress) return;
+        isNavigationInProgress = true;
+        showLoader();
+
+        try {
+            const response = await fetch(`ajax.php?page=battle&r=${Date.now()}`, {
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'text/html',
+                    'X-CSRF-Token': csrfToken
+                }
+            });
+
+            if (!response.ok) throw await handleErrorResponse(response);
+
+            const newToken = response.headers.get('X-CSRF-Token');
+            if (newToken) updateCsrfToken(newToken);
+
+            const content = await response.text();
+            
+            // Контейнер модального окна
+            const modalOverlay = document.createElement('div');
+            modalOverlay.id = 'battle-modal-overlay';
+            modalOverlay.style.position = 'fixed';
+            modalOverlay.style.inset = '0';
+            modalOverlay.style.backgroundColor = 'rgba(0,0,0,0.85)';
+            modalOverlay.style.zIndex = '999999';
+            modalOverlay.style.display = 'flex';
+            modalOverlay.style.alignItems = 'center';
+            modalOverlay.style.justifyContent = 'center';
+            modalOverlay.style.backdropFilter = 'blur(5px)';
+
+            // Кнопка закрытия
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '✕';
+            closeBtn.style.position = 'absolute';
+            closeBtn.style.top = '15px';
+            closeBtn.style.right = '20px';
+            closeBtn.style.background = 'rgba(0,0,0,0.6)';
+            closeBtn.style.color = '#fff';
+            closeBtn.style.border = '2px solid rgba(255,255,255,0.4)';
+            closeBtn.style.borderRadius = '50%';
+            closeBtn.style.width = '40px';
+            closeBtn.style.height = '40px';
+            closeBtn.style.fontSize = '20px';
+            closeBtn.style.cursor = 'pointer';
+            closeBtn.style.zIndex = '1000000';
+            closeBtn.onclick = () => {
+                document.body.removeChild(modalOverlay);
+            };
+
+            // Обёртка контента (адаптивная для планшетов)
+            const contentWrapper = document.createElement('div');
+            contentWrapper.id = 'pc-battle-content';
+            contentWrapper.style.position = 'relative';
+            contentWrapper.style.width = '100%';
+            contentWrapper.style.maxWidth = '820px';
+            contentWrapper.style.height = '100%';
+            contentWrapper.style.maxHeight = '560px';
+            
+            // Если планшет, делаем отступы по краям
+            if (window.innerWidth <= 860) {
+                contentWrapper.style.width = '95%';
+                contentWrapper.style.height = '90%';
+            }
+            
+            contentWrapper.style.overflow = 'hidden';
+            contentWrapper.style.borderRadius = '16px';
+            contentWrapper.style.boxShadow = '0 24px 70px rgba(0,0,0,.8)';
+            
+            contentWrapper.innerHTML = content;
+            
+            modalOverlay.appendChild(closeBtn);
+            modalOverlay.appendChild(contentWrapper);
+            document.body.appendChild(modalOverlay);
+
+            // Инициализация скриптов боя
+            if (window.initBattleUI) {
+                window.initBattleUI(contentWrapper);
+            }
+
+        } catch (error) {
+            console.error('Ошибка загрузки боя:', error);
+            showError(error);
+            if (error.isAuthError) await redirectToLogin();
+        } finally {
+            hideLoader();
+            isNavigationInProgress = false;
+        }
+    }
 
     async function loadPage(page) {
         if (isNavigationInProgress) return;
@@ -941,6 +1031,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const content = await response.text();
             app.innerHTML = content;
+
+            // Если открыли бой на мобильном — инициализируем
+            if (page === 'battle' && window.initBattleUI) {
+                window.initBattleUI(app);
+            }
 
         } catch (error) {
             console.error('Ошибка загрузки:', error);
@@ -1007,9 +1102,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (data.error) error.message = data.error;
             if (data.details) error.details = data.details;
-        } catch (e) {
-            // Не JSON-ответ
-        }
+        } catch (e) {}
 
         return error;
     }
@@ -1031,7 +1124,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function showError(error) {
         const errorHtml = `
             <div class="error">
-                <h3>❌ ${error.message}</h3>
+                <h3> ${error.message}</h3>
                 ${ENVIRONMENT === 'development' && error.details ? `<pre>${JSON.stringify(error.details, null, 2)}</pre>` : ''}
                 <button class="btn retry-btn">Повторить</button>
             </div>
@@ -1064,7 +1157,6 @@ document.addEventListener('DOMContentLoaded', () => {
         app.style.pointerEvents = 'auto';
     }
 });
-
 
 // ------------------ Resource capacity popover (CoC-like) ------------------
 (function(){
@@ -1166,7 +1258,6 @@ document.addEventListener('DOMContentLoaded', () => {
       var x = r.left + r.width/2;
       var y = r.bottom + 8;
 
-      // clamp inside viewport
       var vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
       var vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
 
@@ -1174,14 +1265,12 @@ document.addEventListener('DOMContentLoaded', () => {
       p.style.top = '0px';
       p.style.transform = 'translate(-50%, 0)';
 
-      // after paint, measure and clamp
       requestAnimationFrame(function(){
         try {
           var pr = p.getBoundingClientRect();
           var left = x;
           var top = y;
 
-          // keep within
           if (left - pr.width/2 < 8) left = pr.width/2 + 8;
           if (left + pr.width/2 > vw - 8) left = vw - pr.width/2 - 8;
           if (top + pr.height > vh - 8) top = Math.max(8, r.top - pr.height - 8);
@@ -1194,7 +1283,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(e){}
   }
 
-  // Delegate clicks (SPA-safe)
   document.addEventListener('click', function(e){
     try {
       var img = e.target && e.target.closest ? e.target.closest('.balance img') : null;
@@ -1202,7 +1290,6 @@ document.addEventListener('DOMContentLoaded', () => {
       var balanceEl = img.closest('.balance');
       var key = getResKeyFromBalanceEl(balanceEl);
       if (!key) return;
-      // показываем только для ресурсов с вместимостью (золото/эликсир/чэ)
       if (key === 'gems') { hidePopover(); return; }
 
       showPopover(key, balanceEl, img);

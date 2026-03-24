@@ -192,3 +192,7 @@
 [2026-03-23 11:29:05] ERROR: {"message":"Failed opening required '\/home\/g\/gr5478gr\/clash.vipmars.online\/public_html\/app\/locations\/..\/system\/function.php' (include_path='.:\/usr\/share\/php')","code":500}
 [2026-03-23 11:29:05] ERROR: {"message":"Failed opening required '\/home\/g\/gr5478gr\/clash.vipmars.online\/public_html\/app\/locations\/..\/system\/function.php' (include_path='.:\/usr\/share\/php')","code":500}
 [2026-03-23 11:29:10] ERROR: {"message":"Failed opening required '\/home\/g\/gr5478gr\/clash.vipmars.online\/public_html\/app\/locations\/..\/system\/function.php' (include_path='.:\/usr\/share\/php')","code":500}
+[2026-03-23 23:41:05] ERROR: {"message":"\u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f \u0430\u0432\u0442\u043e\u0440\u0438\u0437\u0430\u0446\u0438\u044f","code":401}
+[2026-03-24 00:05:17] ERROR: {"message":"\u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f \u0430\u0432\u0442\u043e\u0440\u0438\u0437\u0430\u0446\u0438\u044f","code":401}
+[2026-03-24 08:46:08] ERROR: {"message":"\u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f \u0430\u0432\u0442\u043e\u0440\u0438\u0437\u0430\u0446\u0438\u044f","code":401}
+[2026-03-24 08:46:08] ERROR: {"message":"\u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f \u0430\u0432\u0442\u043e\u0440\u0438\u0437\u0430\u0446\u0438\u044f","code":401}
